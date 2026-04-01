@@ -78,12 +78,6 @@ import difflib
 from typing import List, Tuple, Dict
 from itertools import zip_longest
 
-# Import FlowSE denoising class
-# Use relative path for better portability
-flowse_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "FlowSE")
-sys.path.insert(0, flowse_path)
-from simple_denoise import FlowSEDenoiser
-
 warnings.filterwarnings("ignore")
 
 
@@ -692,7 +686,7 @@ def separate_full_vocals_demucs(full_audio: np.ndarray, sample_rate: int) -> np.
         logger.info(f"Running single Demucs pass on device: {device}")
 
         cmd = [
-            "python", "-m", "demucs.separate",
+            sys.executable, "-m", "demucs.separate",
             "-n", "htdemucs",
             "--two-stems", "vocals",
             "-d", device,
@@ -772,7 +766,7 @@ def remove_segment_background_music_demucs(segment_audio, sample_rate, full_voca
         logger.debug(f"Running Demucs on device: {device}")
 
         cmd = [
-            "python", "-m", "demucs.separate",
+            sys.executable, "-m", "demucs.separate",
             "-n", "htdemucs",
             "--two-stems", "vocals",
             "-d", device,  # Explicitly specify device (cuda or cpu)
@@ -1814,117 +1808,6 @@ def add_qwen3omni_caption(filtered_list, audio, save_path):
     return filtered_list, caption_processing_time
 
 
-def apply_flowse_denoising(filtered_list, audio, save_path, denoiser=None, use_asr_moe=False):
-    """
-    Apply FlowSE denoising to segments where sepreformer==True.
-
-    Args:
-        filtered_list (list): ASR result segment list
-        audio (dict): Audio dictionary (containing waveform and sample_rate)
-        save_path (str): Path to save denoised audio files
-        denoiser (FlowSEDenoiser): Pre-loaded FlowSE denoiser object
-        use_asr_moe (bool): Whether in ASRMoE mode (True uses ensemble_text, False uses whisper_text)
-
-    Returns:
-        tuple: (segment list with denoising applied, processing time in seconds)
-    """
-    if denoiser is None:
-        logger.warning("FlowSE denoiser not provided, skipping denoising")
-        return filtered_list, 0.0
-    logger.info(f"Applying FlowSE denoising to sepreformer segments...")
-    denoise_start_time = time.time()
-
-    # Create denoise directory
-    denoise_dir = os.path.join(save_path, "denoised_audio")
-    os.makedirs(denoise_dir, exist_ok=True)
-
-    denoised_count = 0
-
-    for idx, segment in enumerate(filtered_list):
-        # Only process segments where sepreformer==True
-        if not segment.get("sepreformer", False):
-            continue
-
-        try:
-            # Text selection: use ensemble_text (or text) for ASRMoE, otherwise whisper_text
-            if use_asr_moe:
-                # In asr_MoE, ensemble result is stored in "text"
-                text = segment.get("text", "")
-            else:
-                # In standard asr, whisper result is stored in "text"
-                text = segment.get("text", "")
-
-            if not text or not text.strip():
-                logger.warning(f"Segment {idx}: No text available for denoising, skipping")
-                continue
-
-            # Extract segment audio
-            # Prefer enhanced_audio if available (audio separated by SepReformer)
-            if "enhanced_audio" in segment:
-                segment_audio = segment["enhanced_audio"]
-                sample_rate = audio["sample_rate"]
-            else:
-                start_time = segment["start"]
-                end_time = segment["end"]
-                sample_rate = audio["sample_rate"]
-                start_frame = int(start_time * sample_rate)
-                end_frame = int(end_time * sample_rate)
-                segment_audio = audio["waveform"][start_frame:end_frame]
-
-            # Measure original audio RMS level (to preserve volume)
-            original_rms = np.sqrt(np.mean(segment_audio ** 2))
-
-            # Save as temporary input audio file
-            temp_input_path = os.path.join(denoise_dir, f"temp_input_{idx:05d}.wav")
-            sf.write(temp_input_path, segment_audio, sample_rate)
-
-            # Set output file path
-            output_path = os.path.join(denoise_dir, f"denoised_{idx:05d}.wav")
-
-            # Perform FlowSE denoising
-            logger.debug(f"Segment {idx}: Denoising with text: '{text[:50]}...'")
-            denoised_path = denoiser.denoise(
-                audio_path=temp_input_path,
-                text=text,
-                output_path=output_path
-            )
-
-            # Add denoised audio to segment
-            denoised_audio, denoised_sr = sf.read(denoised_path)
-
-            # Volume matching: adjust denoised audio to same RMS level as original
-            if original_rms > 1e-8:  # Only if not silence
-                denoised_rms = np.sqrt(np.mean(denoised_audio ** 2))
-                if denoised_rms > 1e-8:  # Only if denoised audio is not silence either
-                    volume_scale = original_rms / denoised_rms
-                    denoised_audio = denoised_audio * volume_scale
-                    # Prevent clipping
-                    denoised_audio = np.clip(denoised_audio, -1.0, 1.0)
-                    # Re-save volume-adjusted audio
-                    sf.write(denoised_path, denoised_audio, denoised_sr)
-                    logger.debug(f"Segment {idx}: Volume matched (scale: {volume_scale:.3f})")
-
-            segment["denoised_audio_path"] = denoised_path
-            segment["flowse_denoised"] = True
-
-            # Delete temporary input file
-            if os.path.exists(temp_input_path):
-                os.remove(temp_input_path)
-
-            denoised_count += 1
-            logger.debug(f"Segment {idx}: Successfully denoised and saved to {denoised_path}")
-
-        except Exception as e:
-            logger.error(f"Segment {idx}: Error during FlowSE denoising: {e}")
-            segment["flowse_denoised"] = False
-
-    denoise_end_time = time.time()
-    denoise_processing_time = denoise_end_time - denoise_start_time
-
-    logger.info(f"FlowSE denoising completed: {denoised_count} segments processed")
-    return filtered_list, denoise_processing_time
-
-
 # Cost calculation function
 def calculate_cost(model_name: str, input_tokens: int, output_tokens: int) -> float:
     pricing = {
@@ -2579,27 +2462,8 @@ def export_segments_with_enhanced_audio(audio_info, segment_list, save_dir, audi
         filename = f"{idx_str}_{spk}.mp3"
         file_path = os.path.join(segments_dir, filename)
 
-        # 1. Check for FlowSE denoised audio (highest priority)
-        if seg.get("flowse_denoised", False) and "denoised_audio_path" in seg:
-            denoised_path = seg["denoised_audio_path"]
-            if os.path.exists(denoised_path):
-                # Load denoised audio file
-                denoised_waveform, denoised_sr = sf.read(denoised_path)
-
-                # Convert float32 (-1.0 ~ 1.0) -> int16 range
-                denoised_waveform = np.clip(denoised_waveform, -1.0, 1.0)
-                wav_int16 = (denoised_waveform * 32767).astype(np.int16)
-
-                target_segment = PydubAudioSegment(
-                    wav_int16.tobytes(),
-                    frame_rate=denoised_sr,
-                    sample_width=2,
-                    channels=1
-                )
-                logger.debug(f"Segment {idx_str}: Saved using FlowSE denoised output.")
-
-        # 2. Check for SepReformer-processed 'enhanced_audio'
-        elif seg.get("is_separated", False) and "enhanced_audio" in seg:
+        # 1. Check for SepReformer-processed 'enhanced_audio'
+        if seg.get("is_separated", False) and "enhanced_audio" in seg:
             # Convert Numpy array -> Pydub AudioSegment
             enhanced_waveform = seg["enhanced_audio"]
 
@@ -2631,7 +2495,6 @@ def main_process(audio_path, save_path=None, audio_name=None,
                  use_demucs = False,
                  use_sepreformer = False,
                  overlap_threshold = 1.0,
-                 flowse_denoiser = None,
                  sepreformer_separator = None,
                  embedding_model = None,
                  panns_model = None,
@@ -2820,23 +2683,6 @@ def main_process(audio_path, save_path=None, audio_name=None,
         # Calculate Qwen3-Omni RT factor
         caption_rt = caption_time / audio_duration if audio_duration > 0 else 0
 
-        # Step 4.6: Apply FlowSE denoising to sepreformer segments (if enabled)
-        denoise_time = 0.0
-        if args.sepreformer and flowse_denoiser is not None:
-            logger.info("Step 4.6: Applying FlowSE denoising to sepreformer segments")
-            filtered_list, denoise_time = apply_flowse_denoising(
-                filtered_list,
-                audio,
-                save_path,
-                denoiser=flowse_denoiser,
-                use_asr_moe=args.ASRMoE
-            )
-        else:
-            logger.info("Step 4.6: FlowSE denoising skipped (sepreformer flag disabled or denoiser not loaded)")
-
-        # Calculate FlowSE denoising RT factor
-        denoise_rt = denoise_time / audio_duration if audio_duration > 0 else 0
-
         # Print all timing information
         print(f"\n{'='*60}")
         print(f"Audio duration: {audio_duration:.2f} seconds ({audio_duration/60:.2f} minutes)")
@@ -2864,11 +2710,6 @@ def main_process(audio_path, save_path=None, audio_name=None,
             print(f"  - Processing time: {caption_time:.2f} seconds")
             print(f"  - RT factor: {caption_rt:.4f}")
             print(f"{'='*60}")
-        if args.sepreformer and denoise_time > 0:
-            print(f"FlowSE Denoising:")
-            print(f"  - Processing time: {denoise_time:.2f} seconds")
-            print(f"  - RT factor: {denoise_rt:.4f}")
-            print(f"{'='*60}")
         print()
 
         logger.info("Step 5: Write result into MP3 and JSON file")
@@ -2887,10 +2728,6 @@ def main_process(audio_path, save_path=None, audio_name=None,
             # 1. Remove 'enhanced_audio' (audio matrix) key if present
             if "enhanced_audio" in clean_item:
                 del clean_item["enhanced_audio"]
-            # 1-2. Exclude denoised_audio_path from final JSON
-            if "denoised_audio_path" in clean_item:
-                del clean_item["denoised_audio_path"]
-                
             # 2. (Error prevention) Convert Numpy float/int types to Python native types
             for k, v in clean_item.items():
                 if hasattr(v, 'item'):  # If numpy type
@@ -2943,23 +2780,9 @@ def main_process(audio_path, save_path=None, audio_name=None,
                 "enabled": True
             }
 
-        # Add FlowSE denoising metadata if enabled
-        if args.sepreformer and denoise_time > 0:
-            output_data["metadata"]["flowse_denoising"] = {
-                "processing_time_seconds": denoise_time,
-                "rt_factor": denoise_rt,
-                "enabled": True
-            }
-
         final_path = os.path.join(save_path, audio_name + ".json")
         with open(final_path, "w", encoding="utf-8") as f:
             json.dump(output_data, f, ensure_ascii=False, indent=2)
-
-        # Cleanup: remove intermediate FlowSE denoised_audio directory
-        denoise_dir = os.path.join(save_path, "denoised_audio")
-        if os.path.isdir(denoise_dir):
-            shutil.rmtree(denoise_dir, ignore_errors=True)
-            logger.info(f"Removed temporary denoised_audio directory: {denoise_dir}")
 
         logger.info(f"All done, Saved to: {final_path}")
         print(f"Processing complete! Results saved to: {final_path}")
@@ -3337,23 +3160,6 @@ if __name__ == "__main__":
             logger.error(f" * Failed to load SepReformer Separator: {e}")
             sepreformer_separator = None
 
-    # Initialize FlowSE denoiser (only when sepreformer is enabled)
-    flowse_denoiser = None
-    if args.sepreformer:
-        logger.debug(" * Loading FlowSE Denoiser Model")
-        try:
-            flowse_base = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "FlowSE")
-            flowse_denoiser = FlowSEDenoiser(
-                checkpoint_path=os.path.join(flowse_base, "ckpts", "best.pt.tar"),
-                tokenizer_path=os.path.join(flowse_base, "Emilia_ZH_EN_pinyin", "vocab.txt"),
-                vocoder_path=os.path.join(flowse_base, "vocos-mel-24khz"),
-                use_cuda=(device_name == "cuda")
-            )
-            logger.debug(" * FlowSE Denoiser loaded successfully")
-        except Exception as e:
-            logger.error(f" * Failed to load FlowSE Denoiser: {e}")
-            flowse_denoiser = None
-
     # Initialize PANNs model (for background music detection)
     panns_model = None
     if args.demucs:
@@ -3475,7 +3281,7 @@ if __name__ == "__main__":
             # 2. Execute main process (with per-file try-except handling)
             main_process(path, do_vad=args.vad, LLM=args.LLM, use_demucs=args.demucs,
                          use_sepreformer=args.sepreformer, overlap_threshold=args.overlap_threshold,
-                         flowse_denoiser=flowse_denoiser, sepreformer_separator=sepreformer_separator,
+                         sepreformer_separator=sepreformer_separator,
                          embedding_model=embedding_model, panns_model=panns_model,
                          speaker_embedder=speaker_embedder,
                          speaker_link_threshold=args.speaker_link_threshold)

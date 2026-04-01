@@ -2,6 +2,8 @@
 
 A comprehensive audio processing pipeline for speaker diarization, automatic speech recognition, background music removal, and more.
 
+[[Paper]](https://arxiv.org/pdf/2603.25750) [[Demo]](https://kyudan1.github.io/sommelier.github.io/)
+
 ![Sommelier Pipeline](img/pipeline.png)
 
 ## Features
@@ -31,14 +33,32 @@ conda install -c conda-forge ffmpeg -y
 
 ### 3. Install Python Dependencies
 
+PyTorch must be installed **before** `nemo-toolkit[all]` because some dependencies require `torch` at build time.
+
 ```bash
 cd podcast-pipeline
+
+# Step 1: Install PyTorch first
+pip install torch==2.7.1 torchaudio==2.7.1
+
+# Step 2: Install all dependencies
 pip install -r requirements.txt
+
+# Step 3: nemo-toolkit[all] may override the torch version.
+# Reinstall the correct versions after requirements.txt:
+pip install torch==2.7.1 torchaudio==2.7.1 torchvision==0.22.1
 ```
 
-> **Note**: Some packages (e.g., `pyannote.audio`, NeMo toolkit) may require a Hugging Face token. Set it up with:
+> **Note**: Some packages (e.g., `pyannote.audio`, NeMo toolkit) may require a Hugging Face token.
+> 1. CLI login:
 > ```bash
 > huggingface-cli login
+> ```
+> 2. Also set the token in `config.json`:
+> ```json
+> {
+>   "huggingface_token": "hf_YOUR_TOKEN_HERE"
+> }
 > ```
 
 ### 4. Verify Installation
@@ -47,6 +67,9 @@ pip install -r requirements.txt
 python -c "import torch; print(f'PyTorch: {torch.__version__}, CUDA: {torch.cuda.is_available()}')"
 python -c "import whisperx; print('WhisperX OK')"
 python -c "import demucs; print('Demucs OK')"
+python -c "import nemo; print('NeMo OK')"
+python -c "import pyannote.audio; print('Pyannote OK')"
+python main_original_ASR_MoE.py --help
 ```
 
 ## Usage
@@ -216,6 +239,30 @@ input_path/_final/_processed_llm-twelve-cases-[config]/
   - NeMo (Parakeet, Canary, Sortformer)
   - Demucs
   - PANNs
+
+## Tested Environment
+
+The following environment has been verified to run the full pipeline end-to-end (VAD, Diarization, ASR MoE, Demucs, WhisperX alignment):
+
+| Component | Version / Spec |
+|---|---|
+| OS | Linux 5.4.239 (x86_64) |
+| GPU | NVIDIA A100-SXM4-80GB |
+| CUDA | 12.6 |
+| cuDNN | 9.5.1 |
+| Python | 3.10 |
+| PyTorch | 2.7.1+cu126 |
+| NeMo Toolkit | 2.5.3 |
+| Pyannote.audio | 3.3.2 |
+| pytorch-lightning | 2.5.2 |
+| WhisperX | 3.4.2 |
+| Demucs | 4.0.1 |
+
+Test result (60-second English podcast, single A100 GPU):
+- 17 segments extracted, 0 failures
+- Total processing time: ~28 seconds
+- VAD + Sortformer RT factor: 0.013
+- Whisper large-v3 RT factor: 0.170
 
 ## Configuration File
 
