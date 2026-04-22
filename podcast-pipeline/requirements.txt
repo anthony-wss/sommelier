@@ -244,4 +244,3 @@ panns-inference
 kaldialign
 sacrebleu
 ninja==1.11.1.1
-mamba-ssm @ git+https://github.com/state-spaces/mamba.git@v2.2.2
