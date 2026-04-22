@@ -126,9 +126,9 @@ nvidia-nccl-cu12==2.26.2
 nvidia-nvjitlink-cu12==12.6.85
 nvidia-nvtx-cu12==12.6.77
 omegaconf==2.3.0
-onnx==1.18.0
-onnxruntime==1.22.1
-onnxruntime-gpu
+onnx
+onnxruntime<1.24.0
+onnxruntime-gpu<1.24.0
 openai==1.97.1
 optuna==4.4.0
 orjson==3.11.0
@@ -239,7 +239,9 @@ yarl==1.20.1
 zope.event==5.1.1
 zope.interface==7.2
 g2pk
-demucs>=4.0.0
+demucs==4.0.1
 panns-inference
 kaldialign
 sacrebleu
+ninja==1.11.1.1
+mamba-ssm @ git+https://github.com/state-spaces/mamba.git@v2.2.2
