@@ -12,6 +12,7 @@ resolution-markers = [
 overrides = [
     { name = "numpy", specifier = "==1.26.4" },
     { name = "nvidia-resiliency-ext", specifier = "<0.5.0" },
+    { name = "texterrors", specifier = ">=1.1.6" },
     { name = "urllib3", specifier = "<2" },
 ]
 
@@ -5103,7 +5104,6 @@ dependencies = [
     { name = "tensorboardx" },
     { name = "termcolor" },
     { name = "text-unidecode" },
-    { name = "texterrors" },
     { name = "threadpoolctl" },
     { name = "tokenizers" },
     { name = "tomli" },
@@ -5353,7 +5353,6 @@ requires-dist = [
     { name = "tensorboardx", specifier = "==2.6.4" },
     { name = "termcolor", specifier = "==3.1.0" },
     { name = "text-unidecode", specifier = "==1.3" },
-    { name = "texterrors", specifier = "==0.5.1" },
     { name = "threadpoolctl", specifier = "==3.6.0" },
     { name = "tokenizers", specifier = "==0.21.2" },
     { name = "tomli", specifier = "==2.2.1" },
@@ -5790,18 +5789,27 @@ wheels = [
 
 [[package]]
 name = "texterrors"
-version = "0.5.1"
+version = "1.1.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "levenshtein" },
     { name = "loguru" },
     { name = "numpy" },
-    { name = "plac" },
-    { name = "pybind11" },
     { name = "regex" },
     { name = "termcolor" },
+    { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9b/47/9a391643961698df3c804172f005e8b56c9693c14c4170abd9d3c961e971/texterrors-0.5.1.tar.gz", hash = "sha256:7fa24b2ca6ed5e05681b5cfdbb6c1fd0e4ae6518f8939e9782294f620d4eb3b1", size = 23813, upload-time = "2024-06-19T15:43:06.889Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/dc/d4/a24df6d8d60dbc3b6980438f16f3508698168c64d37648b2b1b164f3a4a2/texterrors-1.1.6.tar.gz", hash = "sha256:3442692abac0a174862359b23caf731ecfc286023fd6e24a280192e8c7374d12", size = 873129, upload-time = "2026-04-05T19:54:32.721Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/67/ca/b74e89cf5c1359e95f4925f2ec11aac07475f555f5e171b115c105c2e8c1/texterrors-1.1.6-cp310-cp310-macosx_10_14_x86_64.whl", hash = "sha256:0abc814108f4998d8592a2b982cf3db38e2bc6c740677211fa5442ba3d0cc6c0", size = 575942, upload-time = "2026-04-05T19:53:53.722Z" },
+    { url = "https://files.pythonhosted.org/packages/6f/6a/681baf87eaeaf220962246538deb54054f94e2e178d9f07489534c346567/texterrors-1.1.6-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:eda34caa5d47447da7f3ab5b09863f7fc5333319e5fce4af7e6784b8db35b465", size = 570184, upload-time = "2026-04-05T19:53:54.985Z" },
+    { url = "https://files.pythonhosted.org/packages/d5/49/1fb084246d75ed8b556494c69983bd09fcda1656e188ead9d56964a768f3/texterrors-1.1.6-cp310-cp310-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:d07067400134293db0d06acd12455e7b5244bf81b1fc2617e14019d9e7a2ba71", size = 613752, upload-time = "2026-04-05T19:53:56.296Z" },
+    { url = "https://files.pythonhosted.org/packages/2e/4f/1ec0f6aa4cda7da9bb82957a4509ea3a0516008ac38d169bed7d3d05215a/texterrors-1.1.6-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:fecdb67afb66c460edaef446b6dea78fee9a9df5edd2af703a76c4fe42d9433e", size = 607454, upload-time = "2026-04-05T19:53:57.669Z" },
+    { url = "https://files.pythonhosted.org/packages/87/5b/b195fe99d0d2f50ae8e688d79ae79538b465621ce11976b5f49ccfdf2a95/texterrors-1.1.6-cp310-cp310-musllinux_1_2_i686.whl", hash = "sha256:4020fdcddb5a9ca52290eacc6f60159dcf551c9b669588b3402813ef31933ad6", size = 1123751, upload-time = "2026-04-05T19:53:59.037Z" },
+    { url = "https://files.pythonhosted.org/packages/ef/d1/afffb7c86ae01ced7f2637367e4a237a7e9e67c14fe1499cb472cb8dd045/texterrors-1.1.6-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:40669dcf7df65f46cf274442a0d92ec079ba71a3bb3721f8e8802a27fab6404c", size = 1075327, upload-time = "2026-04-05T19:54:00.12Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/2c/912b46e768cf65c343afcf410c298fbc576da69e3c3de619f5bd8532efbd/texterrors-1.1.6-cp310-cp310-win32.whl", hash = "sha256:1e485badfbb6c9abcc17b4a8d4efdc1f8a799357201cc86a96073f94bcc3d14f", size = 567924, upload-time = "2026-04-05T19:54:01.275Z" },
+    { url = "https://files.pythonhosted.org/packages/87/fd/f18e2c859e17854ec2ac0bcc85d13bdf0d93815af551356bf6d9868f640b/texterrors-1.1.6-cp310-cp310-win_amd64.whl", hash = "sha256:0aa8c6e439ca4a0a01b14617e869a03e4600a5f497f1070eadf6bf162c60a4c2", size = 577258, upload-time = "2026-04-05T19:54:02.346Z" },
+]
 
 [[package]]
 name = "threadpoolctl"

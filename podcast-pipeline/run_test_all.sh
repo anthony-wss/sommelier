@@ -17,7 +17,7 @@ set -euo pipefail
 # List of input folders to process
 # Specify the path to the folder containing your audio files below.
 folders=(
-  "/your/audio/folder"
+  "/work/u3937558/sommelier/test_audios"
 )
 
 # LLM case list
@@ -48,7 +48,7 @@ demucs_flags=(--demucs)
 # WhisperX word-level timestamp flags
 # --whisperx_word_timestamps: Enable word-level timestamps via WhisperX alignment
 # --no-whisperx_word_timestamps: Disable word-level timestamps (default)
-whisperx_flags=(--whisperx_word_timestamps)
+whisperx_flags=(--no-whisperx_word_timestamps)
 #whisperx_flags=(--whisperx_word_timestamps --no-whisperx_word_timestamps)
 # Qwen3-Omni audio captioning flags
 # --qwen3omni: Enable audio caption generation via Qwen3-Omni API
@@ -64,7 +64,7 @@ qwen3omni_flags=(--no-qwen3omni)
 # --sepreformer: Enable overlapping speech separation using SepReformer
 # --no-sepreformer: Disable overlapping speech separation (default)
 #sepreformer_flags=(--sepreformer)
-sepreformer_flags=(--sepreformer)
+sepreformer_flags=(--no-sepreformer)
 # SepReformer overlap threshold (minimum duration to consider as overlap, in seconds)
 overlap_thresholds=(0.2)
 # Cross-chunk speaker linking similarity threshold
@@ -96,7 +96,7 @@ for folder in "${folders[@]}"; do
                               for speaker_link_th in "${speaker_link_thresholds[@]}"; do
                                 for sortformer_pad_offset in "${sortformer_pad_offset_values[@]}"; do
                                   echo "▶ Folder: ${folder}, ${vad}, ${dia3}, ${initprompt}, LLM=${llm}, seg_th=${seg}, min_cluster_size=${min_cluster}, clust_th=${clust}, merge_gap=${merge_gap}, ${asrmoe}, ${demucs}, ${whisperx}, ${qwen3omni}, ${sepreformer}, ${sortformer_param_flags[*]}, sortformer_pad_offset=${sortformer_pad_offset}, overlap_th=${overlap_th}, speaker_link_th=${speaker_link_th}, korean=${korean}"
-                                  /mnt/fr20tb/kyudan/miniforge3/envs/dataset/bin/python main_original_ASR_MoE.py \
+                                  python main_original_ASR_MoE.py \
                                     --input_folder_path "${folder}" \
                                     ${vad} ${dia3} ${initprompt} ${asrmoe} ${demucs} ${whisperx} ${qwen3omni} ${sepreformer} \
                                     ${sortformer_param_flags[@]} \
